@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributeur Automatique - Boissons Fraîches</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DISTRIBUTEUR DE BOISSONS</h1>
+            <div class="solde-distributeur">
+                Solde: <span id="solde-distributeur">0.00</span>€
+            </div>
+        </header>
+
+        <main>
+            <section class="selection-boissons">
+                <h2>CHOISISSEZ VOS BOISSONS (MAX 2)</h2>
+                <div class="boissons-grid" id="boissons-grid">
+                    <!-- Généré par JavaScript -->
+                </div>
+                <div class="selection-actuelle">
+                    <h3>VOTRE SÉLECTION:</h3>
+                    <div id="panier" class="panier">
+                        <div class="vide">Aucune boisson sélectionnée</div>
+                    </div>
+                    <div class="total">
+                        Total: <span id="total-panier">0.00</span>€
+                    </div>
+                </div>
+            </section>
+
+            <section class="paiement-section" id="paiement-section">
+                <h2>PAIEMENT</h2>
+                <div class="qr-code-container">
+                    <div id="qr-code"></div>
+                    <p>Scannez ce code QR avec votre téléphone pour payer</p>
+                    <div class="transaction-info">
+                        <p>Transaction ID: <span id="transaction-id">-</span></p>
+                        <p>Montant: <span id="montant-transaction">0.00</span>€</p>
+                        <p>Expire dans: <span id="expiration-timer">10:00</span></p>
+                    </div>
+                </div>
+                <div class="statut-paiement" id="statut-paiement">
+                    <div class="loader"></div>
+                    <span>En attente de paiement...</span>
+                </div>
+                <button id="annuler-paiement" class="btn-annuler">Annuler la transaction</button>
+            </section>
+
+            <div class="actions">
+                <button id="btn-payer" class="btn-payer" disabled>PAYER</button>
+                <button id="btn-modifier" class="btn-modifier" disabled>MODIFIER</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
