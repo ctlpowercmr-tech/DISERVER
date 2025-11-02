@@ -25,7 +25,7 @@ class Distributeur {
             console.log('✅ Connexion API établie');
         } catch (error) {
             console.error('❌ Erreur connexion API:', error);
-            alert('⚠️ Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+            alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
         }
     }
     
@@ -51,12 +51,12 @@ class Distributeur {
     
     ajouterAuPanier(boisson) {
         if (this.panier.length >= 2) {
-            alert('⚠️ Vous ne pouvez sélectionner que 2 boissons maximum');
+            alert('Vous ne pouvez sélectionner que 2 boissons maximum');
             return;
         }
         
         if (this.panier.find(item => item.id === boisson.id)) {
-            alert('⚠️ Cette boisson est déjà dans votre sélection');
+            alert('Cette boisson est déjà dans votre sélection');
             return;
         }
         
@@ -134,8 +134,8 @@ class Distributeur {
                 throw new Error(result.error || 'Erreur lors de la création de la transaction');
             }
         } catch (error) {
-            console.error('❌ Erreur:', error);
-            alert('❌ Erreur: ' + error.message);
+            console.error('Erreur:', error);
+            alert('Erreur: ' + error.message);
         }
     }
     
@@ -152,21 +152,24 @@ class Distributeur {
         transactionIdElement.textContent = transaction.id;
         montantTransactionElement.textContent = transaction.montant.toFixed(2);
         
-        // Générer le QR code avec les données de transaction
+        // Générer le QR code AVEC LA BONNE LIBRAIRIE
         qrCodeElement.innerHTML = '';
-        const qrCode = new QRCode(qrCodeElement, {
-            text: JSON.stringify({
-                transactionId: transaction.id,
-                montant: transaction.montant,
-                apiUrl: this.API_URL,
-                type: 'paiement-boisson'
-            }),
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
+        
+        const typeNumber = 0; // Auto
+        const errorCorrectionLevel = 'H';
+        const qr = qrcode(typeNumber, errorCorrectionLevel);
+        
+        qr.addData(JSON.stringify({
+            transactionId: transaction.id,
+            montant: transaction.montant,
+            apiUrl: this.API_URL
+        }));
+        
+        qr.make();
+        
+        // Créer l'élément image du QR code
+        const qrImage = qr.createDataURL(4);
+        qrCodeElement.innerHTML = `<img src="${qrImage}" alt="QR Code Paiement" style="width: 200px; height: 200px;">`;
         
         // Faire défiler jusqu'au QR code
         paiementSection.scrollIntoView({ behavior: 'smooth' });
@@ -232,7 +235,7 @@ class Distributeur {
                 }
             }
         } catch (error) {
-            console.error('❌ Erreur lors de la vérification du statut:', error);
+            console.error('Erreur lors de la vérification du statut:', error);
         }
     }
     
@@ -262,7 +265,7 @@ class Distributeur {
                     method: 'POST'
                 });
             } catch (error) {
-                console.error('❌ Erreur lors de l\'annulation:', error);
+                console.error('Erreur lors de l\'annulation:', error);
             }
         }
         
@@ -279,7 +282,7 @@ class Distributeur {
                 document.getElementById('solde-distributeur').textContent = result.solde.toFixed(2);
             }
         } catch (error) {
-            console.error('❌ Erreur lors du chargement du solde:', error);
+            console.error('Erreur lors du chargement du solde:', error);
         }
     }
 }
