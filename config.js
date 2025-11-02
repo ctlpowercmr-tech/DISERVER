@@ -1,9 +1,7 @@
-// Configuration de l'API - URL RENDER
 const CONFIG = {
   API_URL: 'https://server-6-oxdj.onrender.com'
 };
 
-// Liste des boissons disponibles
 const BOISSONS = [
   { id: 1, nom: "Coca-Cola", prix: 1.50, icone: "🥤", couleur: "#E10E02" },
   { id: 2, nom: "Pepsi", prix: 1.40, icone: "🥤", couleur: "#004B93" },
