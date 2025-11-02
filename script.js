@@ -4,28 +4,85 @@ class Distributeur {
         this.transactionEnCours = null;
         this.timerExpiration = null;
         this.API_URL = CONFIG.API_URL;
+        this.estConnecte = false;
         
         this.init();
     }
     
     async init() {
-        await this.verifierConnexionAPI();
+        // Tester la connexion immédiatement au chargement
+        await this.testerConnexionServeur();
         this.afficherBoissons();
         this.chargerSolde();
         this.setupEventListeners();
         
         // Vérifier périodiquement le statut des transactions
         setInterval(() => this.verifierStatutTransaction(), 2000);
+        
+        // Vérifier la connexion toutes les 30 secondes
+        setInterval(() => this.testerConnexionServeur(), 30000);
     }
     
-    async verifierConnexionAPI() {
+    async testerConnexionServeur() {
         try {
-            const response = await fetch(`${this.API_URL}/api/health`);
-            if (!response.ok) throw new Error('API non disponible');
-            console.log('✅ Connexion API établie');
+            const debut = Date.now();
+            const response = await fetch(`${this.API_URL}/api/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                timeout: 5000
+            });
+            
+            const tempsReponse = Date.now() - debut;
+            
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const result = await response.json();
+            
+            if (result.status === 'OK') {
+                this.estConnecte = true;
+                console.log(`✅ Serveur connecté (${tempsReponse}ms)`);
+                this.mettreAJourStatutConnexion('connecte');
+                return true;
+            } else {
+                throw new Error('Réponse serveur invalide');
+            }
         } catch (error) {
-            console.error('❌ Erreur connexion API:', error);
-            alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+            console.error('❌ Erreur connexion serveur:', error);
+            this.estConnecte = false;
+            this.mettreAJourStatutConnexion('erreur', error.message);
+            return false;
+        }
+    }
+    
+    mettreAJourStatutConnexion(statut, message = '') {
+        let statutElement = document.getElementById('statut-connexion');
+        
+        if (!statutElement) {
+            statutElement = document.createElement('div');
+            statutElement.id = 'statut-connexion';
+            statutElement.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                padding: 10px 15px;
+                border-radius: 20px;
+                font-weight: bold;
+                z-index: 1000;
+                backdrop-filter: blur(10px);
+            `;
+            document.body.appendChild(statutElement);
+        }
+        
+        if (statut === 'connecte') {
+            statutElement.textContent = '✅ En ligne';
+            statutElement.style.background = 'rgba(76, 175, 80, 0.8)';
+            statutElement.style.color = 'white';
+        } else {
+            statutElement.textContent = '❌ Hors ligne';
+            statutElement.style.background = 'rgba(244, 67, 54, 0.8)';
+            statutElement.style.color = 'white';
         }
     }
     
@@ -99,8 +156,14 @@ class Distributeur {
         const btnPayer = document.getElementById('btn-payer');
         const btnModifier = document.getElementById('btn-modifier');
         
-        btnPayer.disabled = this.panier.length === 0;
+        btnPayer.disabled = this.panier.length === 0 || !this.estConnecte;
         btnModifier.disabled = this.panier.length === 0;
+        
+        if (!this.estConnecte) {
+            btnPayer.title = 'Serveur non connecté';
+        } else {
+            btnPayer.title = '';
+        }
     }
     
     setupEventListeners() {
@@ -110,6 +173,12 @@ class Distributeur {
     }
     
     async demarrerPaiement() {
+        if (!this.estConnecte) {
+            alert('❌ Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
+            await this.testerConnexionServeur();
+            return;
+        }
+        
         const total = this.panier.reduce((sum, boisson) => sum + boisson.prix, 0);
         
         try {
@@ -124,6 +193,10 @@ class Distributeur {
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
@@ -135,7 +208,9 @@ class Distributeur {
             }
         } catch (error) {
             console.error('Erreur:', error);
-            alert('Erreur: ' + error.message);
+            this.estConnecte = false;
+            this.mettreAJourStatutConnexion('erreur', error.message);
+            alert('❌ Erreur de connexion au serveur: ' + error.message);
         }
     }
     
@@ -152,16 +227,17 @@ class Distributeur {
         transactionIdElement.textContent = transaction.id;
         montantTransactionElement.textContent = transaction.montant.toFixed(2);
         
-        // Données à encoder dans le QR code
+        // Données pour le QR code
         const qrData = JSON.stringify({
             transactionId: transaction.id,
             montant: transaction.montant,
-            apiUrl: this.API_URL
+            apiUrl: this.API_URL,
+            timestamp: Date.now()
         });
         
-        console.log('QR Code Data:', qrData); // Pour debug
+        console.log('QR Code Data:', qrData);
         
-        // Générer le QR code avec la librairie correcte
+        // Générer le QR code
         qrCodeElement.innerHTML = '';
         
         try {
@@ -174,11 +250,11 @@ class Distributeur {
             qrCodeElement.innerHTML = qr.createImgTag(4);
         } catch (error) {
             console.error('Erreur génération QR code:', error);
-            // Fallback: afficher l'ID de transaction
+            // Fallback simple
             qrCodeElement.innerHTML = `
-                <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                <div style="background: white; padding: 20px; border-radius: 10px; text-align: center; color: black;">
                     <h3>ID Transaction:</h3>
-                    <p style="font-size: 18px; font-weight: bold; color: #000;">${transaction.id}</p>
+                    <p style="font-size: 24px; font-weight: bold; margin: 10px 0;">${transaction.id}</p>
                     <p>Montant: ${transaction.montant.toFixed(2)}€</p>
                     <p>Entrez cet ID dans l'application mobile</p>
                 </div>
@@ -215,10 +291,15 @@ class Distributeur {
     }
     
     async verifierStatutTransaction() {
-        if (!this.transactionEnCours) return;
+        if (!this.transactionEnCours || !this.estConnecte) return;
         
         try {
             const response = await fetch(`${this.API_URL}/api/transaction/${this.transactionEnCours.id}`);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
@@ -273,7 +354,7 @@ class Distributeur {
     }
     
     async annulerPaiement() {
-        if (this.transactionEnCours) {
+        if (this.transactionEnCours && this.estConnecte) {
             try {
                 await fetch(`${this.API_URL}/api/transaction/${this.transactionEnCours.id}/annuler`, {
                     method: 'POST'
@@ -290,6 +371,11 @@ class Distributeur {
     async chargerSolde() {
         try {
             const response = await fetch(`${this.API_URL}/api/solde/distributeur`);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
@@ -301,5 +387,7 @@ class Distributeur {
     }
 }
 
-// Initialiser le distributeur
-const distributeur = new Distributeur();
+// Initialiser le distributeur immédiatement au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    window.distributeur = new Distributeur();
+});
