@@ -152,24 +152,38 @@ class Distributeur {
         transactionIdElement.textContent = transaction.id;
         montantTransactionElement.textContent = transaction.montant.toFixed(2);
         
-        // Générer le QR code AVEC LA BONNE LIBRAIRIE
-        qrCodeElement.innerHTML = '';
-        
-        const typeNumber = 0; // Auto
-        const errorCorrectionLevel = 'H';
-        const qr = qrcode(typeNumber, errorCorrectionLevel);
-        
-        qr.addData(JSON.stringify({
+        // Données à encoder dans le QR code
+        const qrData = JSON.stringify({
             transactionId: transaction.id,
             montant: transaction.montant,
             apiUrl: this.API_URL
-        }));
+        });
         
-        qr.make();
+        console.log('QR Code Data:', qrData); // Pour debug
         
-        // Créer l'élément image du QR code
-        const qrImage = qr.createDataURL(4);
-        qrCodeElement.innerHTML = `<img src="${qrImage}" alt="QR Code Paiement" style="width: 200px; height: 200px;">`;
+        // Générer le QR code avec la librairie correcte
+        qrCodeElement.innerHTML = '';
+        
+        try {
+            const typeNumber = 0;
+            const errorCorrectionLevel = 'L';
+            const qr = qrcode(typeNumber, errorCorrectionLevel);
+            qr.addData(qrData);
+            qr.make();
+            
+            qrCodeElement.innerHTML = qr.createImgTag(4);
+        } catch (error) {
+            console.error('Erreur génération QR code:', error);
+            // Fallback: afficher l'ID de transaction
+            qrCodeElement.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 10px; text-align: center;">
+                    <h3>ID Transaction:</h3>
+                    <p style="font-size: 18px; font-weight: bold; color: #000;">${transaction.id}</p>
+                    <p>Montant: ${transaction.montant.toFixed(2)}€</p>
+                    <p>Entrez cet ID dans l'application mobile</p>
+                </div>
+            `;
+        }
         
         // Faire défiler jusqu'au QR code
         paiementSection.scrollIntoView({ behavior: 'smooth' });
