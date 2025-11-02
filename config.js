@@ -1,5 +1,5 @@
 const CONFIG = {
-  API_URL: 'https://server-6-oxdj.onrender.com'
+  API_URL: 'https://server-7-hezt.onrender.com'
 };
 
 const BOISSONS = [
@@ -12,3 +12,4 @@ const BOISSONS = [
   { id: 7, nom: "Oasis", prix: 1.35, icone: "🌺", couleur: "#FF1493" },
   { id: 8, nom: "Schweppes", prix: 1.40, icone: "💫", couleur: "#00CED1" }
 ];
+
