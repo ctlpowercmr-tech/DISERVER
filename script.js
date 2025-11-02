@@ -25,7 +25,7 @@ class Distributeur {
             console.log('✅ Connexion API établie');
         } catch (error) {
             console.error('❌ Erreur connexion API:', error);
-            alert('Impossible de se connecter au serveur. Vérifiez votre connexion.');
+            alert('⚠️ Impossible de se connecter au serveur. Vérifiez votre connexion internet.');
         }
     }
     
@@ -51,12 +51,12 @@ class Distributeur {
     
     ajouterAuPanier(boisson) {
         if (this.panier.length >= 2) {
-            alert('Vous ne pouvez sélectionner que 2 boissons maximum');
+            alert('⚠️ Vous ne pouvez sélectionner que 2 boissons maximum');
             return;
         }
         
         if (this.panier.find(item => item.id === boisson.id)) {
-            alert('Cette boisson est déjà dans votre sélection');
+            alert('⚠️ Cette boisson est déjà dans votre sélection');
             return;
         }
         
@@ -134,8 +134,8 @@ class Distributeur {
                 throw new Error(result.error || 'Erreur lors de la création de la transaction');
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur: ' + error.message);
+            console.error('❌ Erreur:', error);
+            alert('❌ Erreur: ' + error.message);
         }
     }
     
@@ -158,8 +158,8 @@ class Distributeur {
             text: JSON.stringify({
                 transactionId: transaction.id,
                 montant: transaction.montant,
-                type: 'paiement-boisson',
-                apiUrl: this.API_URL
+                apiUrl: this.API_URL,
+                type: 'paiement-boisson'
             }),
             width: 200,
             height: 200,
@@ -213,8 +213,7 @@ class Distributeur {
                     statutElement.className = 'statut-paiement success';
                     
                     // Mettre à jour le solde du distributeur
-                    this.soldeDistributeur += transaction.montant;
-                    document.getElementById('solde-distributeur').textContent = this.soldeDistributeur.toFixed(2);
+                    await this.chargerSolde();
                     
                     if (this.timerExpiration) clearInterval(this.timerExpiration);
                     
@@ -226,10 +225,14 @@ class Distributeur {
                     statutElement.innerHTML = '❌ Transaction annulée';
                     statutElement.className = 'statut-paiement error';
                     if (this.timerExpiration) clearInterval(this.timerExpiration);
+                } else if (transaction.statut === 'expire') {
+                    statutElement.innerHTML = '❌ Transaction expirée';
+                    statutElement.className = 'statut-paiement error';
+                    if (this.timerExpiration) clearInterval(this.timerExpiration);
                 }
             }
         } catch (error) {
-            console.error('Erreur lors de la vérification du statut:', error);
+            console.error('❌ Erreur lors de la vérification du statut:', error);
         }
     }
     
@@ -259,7 +262,7 @@ class Distributeur {
                     method: 'POST'
                 });
             } catch (error) {
-                console.error('Erreur lors de l\'annulation:', error);
+                console.error('❌ Erreur lors de l\'annulation:', error);
             }
         }
         
@@ -273,11 +276,10 @@ class Distributeur {
             const result = await response.json();
             
             if (result.success) {
-                this.soldeDistributeur = result.solde;
-                document.getElementById('solde-distributeur').textContent = this.soldeDistributeur.toFixed(2);
+                document.getElementById('solde-distributeur').textContent = result.solde.toFixed(2);
             }
         } catch (error) {
-            console.error('Erreur lors du chargement du solde:', error);
+            console.error('❌ Erreur lors du chargement du solde:', error);
         }
     }
 }
