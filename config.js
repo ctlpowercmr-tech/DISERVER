@@ -1,6 +1,6 @@
-// Configuration de l'API - REMPLACEZ AVEC VOTRE URL RENDER
+
 const CONFIG = {
-  API_URL: 'https://server-10-g9fg.onrender.com'
+  API_URL: 'https://server-persis.onrender.com'
 };
 
 // Liste des boissons disponibles
@@ -14,6 +14,7 @@ const BOISSONS = [
   { id: 7, nom: "Oasis", prix: 1.35, icone: "🌺", couleur: "#FF1493" },
   { id: 8, nom: "Schweppes", prix: 1.40, icone: "💫", couleur: "#00CED1" }
 ];
+
 
 
 
