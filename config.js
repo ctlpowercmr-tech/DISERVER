@@ -1,6 +1,6 @@
 // Configuration de l'API
 const CONFIG = {
-  API_URL: 'https://server-jal5.onrender.com'
+  API_URL: 'https://server-1-7fjk.onrender.com'
 };
 
 // Liste des boissons avec vraies images et prix en FCFA
@@ -86,5 +86,6 @@ const BOISSONS = [
     populaire: true
   }
 ];
+
 
 
