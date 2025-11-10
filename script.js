@@ -1,15 +1,10 @@
-class Distributeur {
+class DistributeurCTL {
     constructor() {
         this.panier = [];
         this.transactionEnCours = null;
         this.timerExpiration = null;
         this.API_URL = CONFIG.API_URL;
         this.estConnecte = false;
-        this.stats = {
-            chiffreAffaire: 0,
-            ventes: 0,
-            transactions: 0
-        };
         
         this.init();
     }
@@ -18,68 +13,54 @@ class Distributeur {
         await this.testerConnexionServeur();
         this.afficherBoissons();
         this.chargerSolde();
-        this.chargerStats();
         this.setupEventListeners();
-        this.setupNavigation();
         
-        // Vérifier périodiquement
         setInterval(() => this.verifierStatutTransaction(), 2000);
         setInterval(() => this.testerConnexionServeur(), 30000);
     }
     
-    setupNavigation() {
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const section = e.target.getAttribute('data-section');
-                this.changerSection(section);
-            });
-        });
-    }
-    
-    changerSection(section) {
-        // Mettre à jour les boutons de navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-section="${section}"]`).classList.add('active');
-        
-        // Afficher la section correspondante
-        document.querySelectorAll('.content-section').forEach(sect => {
-            sect.classList.remove('active');
-        });
-        document.getElementById(`${section}-section`).classList.add('active');
-    }
-    
     async testerConnexionServeur() {
         try {
+            const debut = Date.now();
             const response = await fetch(`${this.API_URL}/api/health`);
-            if (!response.ok) throw new Error('API non disponible');
             
-            this.estConnecte = true;
-            this.mettreAJourStatutConnexion(true);
-            return true;
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const result = await response.json();
+            const tempsReponse = Date.now() - debut;
+            
+            if (result.status === 'OK') {
+                this.estConnecte = true;
+                this.mettreAJourStatutConnexion('connecte');
+                return true;
+            } else {
+                throw new Error('Réponse serveur invalide');
+            }
         } catch (error) {
-            console.error('Erreur connexion serveur:', error);
+            console.error('❌ Erreur connexion serveur:', error);
             this.estConnecte = false;
-            this.mettreAJourStatutConnexion(false);
+            this.mettreAJourStatutConnexion('erreur', error.message);
             return false;
         }
     }
     
-    mettreAJourStatutConnexion(connecte) {
-        const statutElement = document.getElementById('statut-serveur');
-        const footerStatut = document.getElementById('footer-statut');
+    mettreAJourStatutConnexion(statut, message = '') {
+        let statutElement = document.getElementById('statut-connexion');
         
-        if (connecte) {
-            statutElement.innerHTML = '<div class="statut-point"></div><span>En ligne</span>';
-            statutElement.style.background = 'rgba(76, 175, 80, 0.2)';
-            footerStatut.textContent = 'Connecté';
-            footerStatut.style.color = '#4CAF50';
+        if (!statutElement) {
+            statutElement = document.createElement('div');
+            statutElement.id = 'statut-connexion';
+            document.body.appendChild(statutElement);
+        }
+        
+        if (statut === 'connecte') {
+            statutElement.textContent = '🟢 CTL-Power Connecté';
+            statutElement.style.background = 'rgba(76, 175, 80, 0.9)';
+            statutElement.style.color = 'white';
         } else {
-            statutElement.innerHTML = '<div class="statut-point" style="background: #f44336;"></div><span>Hors ligne</span>';
-            statutElement.style.background = 'rgba(244, 67, 54, 0.2)';
-            footerStatut.textContent = 'Déconnecté';
-            footerStatut.style.color = '#f44336';
+            statutElement.textContent = '🔴 CTL-Power Hors Ligne';
+            statutElement.style.background = 'rgba(244, 67, 54, 0.9)';
+            statutElement.style.color = 'white';
         }
     }
     
@@ -90,13 +71,10 @@ class Distributeur {
         BOISSONS.forEach(boisson => {
             const card = document.createElement('div');
             card.className = 'boisson-card';
-            if (boisson.populaire) {
-                card.innerHTML += '<div class="boisson-populaire">🌟 POPULAIRE</div>';
-            }
-            
-            card.innerHTML += `
+            card.innerHTML = `
                 <div class="boisson-image">
-                    <img src="${boisson.image}" alt="${boisson.nom}" onerror="this.src='https://via.placeholder.com/200x200/667eea/ffffff?text=🥤'">
+                    <img src="${boisson.image}" alt="${boisson.nom}" 
+                         onerror="this.src='https://via.placeholder.com/180x180/667eea/ffffff?text=${boisson.nom}'">
                 </div>
                 <div class="boisson-nom">${boisson.nom}</div>
                 <div class="boisson-prix">${boisson.prix.toLocaleString()} FCFA</div>
@@ -109,19 +87,51 @@ class Distributeur {
     
     ajouterAuPanier(boisson) {
         if (this.panier.length >= 2) {
-            this.afficherNotification('❌ Maximum 2 boissons autorisées', 'error');
+            this.afficherNotification('⚠️ Maximum 2 boissons autorisées', 'warning');
             return;
         }
         
         if (this.panier.find(item => item.id === boisson.id)) {
-            this.afficherNotification('❌ Cette boisson est déjà sélectionnée', 'error');
+            this.afficherNotification('⚠️ Cette boisson est déjà sélectionnée', 'warning');
             return;
         }
         
         this.panier.push(boisson);
         this.mettreAJourPanier();
         this.mettreAJourBoutons();
-        this.afficherNotification(`✅ ${boisson.nom} ajoutée au panier`, 'success');
+        this.afficherNotification(`✅ ${boisson.nom} ajoutée`, 'success');
+    }
+    
+    afficherNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            animation: slideDown 0.3s ease;
+        `;
+        
+        if (type === 'success') {
+            notification.style.background = 'rgba(76, 175, 80, 0.9)';
+        } else if (type === 'warning') {
+            notification.style.background = 'rgba(255, 152, 0, 0.9)';
+        } else {
+            notification.style.background = 'rgba(33, 150, 243, 0.9)';
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
     }
     
     retirerDuPanier(boissonId) {
@@ -129,20 +139,21 @@ class Distributeur {
         this.panier = this.panier.filter(item => item.id !== boissonId);
         this.mettreAJourPanier();
         this.mettreAJourBoutons();
-        this.afficherNotification(`🗑️ ${boisson.nom} retirée du panier`, 'info');
+        
+        if (boisson) {
+            this.afficherNotification(`❌ ${boisson.nom} retirée`, 'warning');
+        }
     }
     
     mettreAJourPanier() {
         const panierElement = document.getElementById('panier');
         const totalElement = document.getElementById('total-panier');
+        const counterElement = document.getElementById('counter');
+        
+        counterElement.textContent = `${this.panier.length}/2`;
         
         if (this.panier.length === 0) {
-            panierElement.innerHTML = `
-                <div class="panier-vide">
-                    <div class="empty-icon">🥤</div>
-                    <p>Aucune boisson sélectionnée</p>
-                </div>
-            `;
+            panierElement.innerHTML = '<div class="vide">Aucune boisson sélectionnée</div>';
         } else {
             panierElement.innerHTML = '';
             this.panier.forEach(boisson => {
@@ -179,7 +190,7 @@ class Distributeur {
     
     async demarrerPaiement() {
         if (!this.estConnecte) {
-            this.afficherNotification('❌ Impossible de se connecter au serveur', 'error');
+            this.afficherNotification('❌ Impossible de se connecter au serveur CTL-Power', 'error');
             await this.testerConnexionServeur();
             return;
         }
@@ -198,33 +209,38 @@ class Distributeur {
                 })
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
                 this.transactionEnCours = result.data;
                 this.afficherQRCode(result.data);
                 this.demarrerTimerExpiration();
-                this.changerSection('paiement');
+                this.afficherNotification('✅ QR Code généré - Scannez avec CTL-Pay', 'success');
             } else {
                 throw new Error(result.error || 'Erreur lors de la création de la transaction');
             }
         } catch (error) {
             console.error('Erreur:', error);
-            this.afficherNotification('❌ Erreur: ' + error.message, 'error');
+            this.estConnecte = false;
+            this.mettreAJourStatutConnexion('erreur', error.message);
+            this.afficherNotification('❌ Erreur de connexion au serveur', 'error');
         }
     }
     
     afficherQRCode(transaction) {
+        const paiementSection = document.getElementById('paiement-section');
         const qrCodeElement = document.getElementById('qr-code');
         const transactionIdElement = document.getElementById('transaction-id');
         const montantTransactionElement = document.getElementById('montant-transaction');
         
-        // Mettre à jour les informations
-        transactionIdElement.textContent = transaction.id;
-        montantTransactionElement.textContent = transaction.montant.toLocaleString() + ' FCFA';
+        paiementSection.style.display = 'block';
         
-        // Générer le QR code
-        qrCodeElement.innerHTML = '';
+        transactionIdElement.textContent = transaction.id;
+        montantTransactionElement.textContent = transaction.montant.toLocaleString();
         
         const qrData = JSON.stringify({
             transactionId: transaction.id,
@@ -232,6 +248,8 @@ class Distributeur {
             apiUrl: this.API_URL,
             timestamp: Date.now()
         });
+        
+        qrCodeElement.innerHTML = '';
         
         try {
             const typeNumber = 0;
@@ -245,20 +263,22 @@ class Distributeur {
             console.error('Erreur génération QR code:', error);
             qrCodeElement.innerHTML = `
                 <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; color: black;">
-                    <h3 style="margin-bottom: 15px;">📱 ID Transaction</h3>
-                    <p style="font-size: 24px; font-weight: bold; margin: 20px 0; color: #667eea;">${transaction.id}</p>
-                    <p style="font-size: 18px; margin: 10px 0;">Montant: ${transaction.montant.toLocaleString()} FCFA</p>
-                    <p style="opacity: 0.7;">Entrez cet ID dans l'application CTL-PAY</p>
+                    <h3 style="margin-bottom: 15px; color: #333;">ID Transaction CTL:</h3>
+                    <p style="font-size: 28px; font-weight: bold; margin: 20px 0; color: #667eea;">${transaction.id}</p>
+                    <p style="font-size: 18px; margin: 10px 0;">Montant: <strong>${transaction.montant.toLocaleString()} FCFA</strong></p>
+                    <p style="color: #666;">Entrez cet ID dans l'application CTL-Pay</p>
                 </div>
             `;
         }
+        
+        paiementSection.scrollIntoView({ behavior: 'smooth' });
     }
     
     demarrerTimerExpiration() {
         if (this.timerExpiration) clearInterval(this.timerExpiration);
         
         const timerElement = document.getElementById('expiration-timer');
-        let tempsRestant = 10 * 60; // 10 minutes
+        let tempsRestant = 10 * 60;
         
         this.timerExpiration = setInterval(() => {
             tempsRestant--;
@@ -276,7 +296,8 @@ class Distributeur {
     transactionExpiree() {
         const statutElement = document.getElementById('statut-paiement');
         statutElement.innerHTML = '❌ Transaction expirée';
-        statutElement.style.color = '#f44336';
+        statutElement.className = 'statut-paiement error';
+        this.afficherNotification('❌ Transaction expirée', 'error');
     }
     
     async verifierStatutTransaction() {
@@ -284,6 +305,11 @@ class Distributeur {
         
         try {
             const response = await fetch(`${this.API_URL}/api/transaction/${this.transactionEnCours.id}`);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
@@ -292,37 +318,29 @@ class Distributeur {
                 
                 if (transaction.statut === 'paye') {
                     statutElement.innerHTML = '✅ Paiement réussi! Distribution en cours...';
-                    statutElement.style.color = '#4CAF50';
+                    statutElement.className = 'statut-paiement success';
                     
-                    // Jouer le son de succès
-                    this.jouerSon('scan');
-                    
-                    // Mettre à jour les stats
-                    this.stats.chiffreAffaire += transaction.montant;
-                    this.stats.ventes += transaction.boissons.length;
-                    this.stats.transactions++;
-                    this.mettreAJourStats();
+                    await this.chargerSolde();
                     
                     if (this.timerExpiration) clearInterval(this.timerExpiration);
                     
-                    // Réinitialiser après 3 secondes
+                    this.afficherNotification('🎉 Paiement réussi! Boissons en distribution', 'success');
+                    
                     setTimeout(() => {
                         this.reinitialiserApresPaiement();
-                        this.changerSection('boissons');
-                        this.afficherNotification('🎉 Paiement réussi! Merci pour votre achat', 'success');
-                    }, 3000);
+                    }, 5000);
+                } else if (transaction.statut === 'annule') {
+                    statutElement.innerHTML = '❌ Transaction annulée';
+                    statutElement.className = 'statut-paiement error';
+                    if (this.timerExpiration) clearInterval(this.timerExpiration);
+                } else if (transaction.statut === 'expire') {
+                    statutElement.innerHTML = '❌ Transaction expirée';
+                    statutElement.className = 'statut-paiement error';
+                    if (this.timerExpiration) clearInterval(this.timerExpiration);
                 }
             }
         } catch (error) {
-            console.error('Erreur vérification statut:', error);
-        }
-    }
-    
-    jouerSon(type) {
-        const audio = document.getElementById('sound-scan');
-        if (audio) {
-            audio.currentTime = 0;
-            audio.play().catch(e => console.log('Son non joué:', e));
+            console.error('Erreur lors de la vérification du statut:', error);
         }
     }
     
@@ -331,121 +349,57 @@ class Distributeur {
         this.transactionEnCours = null;
         this.timerExpiration = null;
         
-        document.getElementById('statut-paiement').innerHTML = '<div class="loader"></div> En attente de paiement...';
-        document.getElementById('statut-paiement').style.color = 'white';
+        document.getElementById('paiement-section').style.display = 'none';
+        document.getElementById('statut-paiement').className = 'statut-paiement';
+        document.getElementById('statut-paiement').innerHTML = '<div class="loader"></div><span>En attente de paiement...</span>';
         
         this.mettreAJourPanier();
         this.mettreAJourBoutons();
-        this.chargerSolde();
     }
     
     modifierCommande() {
         this.panier = [];
         this.mettreAJourPanier();
         this.mettreAJourBoutons();
-        this.afficherNotification('🔄 Commande modifiée', 'info');
+        this.afficherNotification('✏️ Commande modifiée', 'info');
     }
     
     async annulerPaiement() {
-        if (this.transactionEnCours) {
+        if (this.transactionEnCours && this.estConnecte) {
             try {
                 await fetch(`${this.API_URL}/api/transaction/${this.transactionEnCours.id}/annuler`, {
                     method: 'POST'
                 });
             } catch (error) {
-                console.error('Erreur annulation:', error);
+                console.error('Erreur lors de l\'annulation:', error);
             }
         }
         
         if (this.timerExpiration) clearInterval(this.timerExpiration);
         this.reinitialiserApresPaiement();
-        this.changerSection('boissons');
-        this.afficherNotification('❌ Transaction annulée', 'info');
+        this.afficherNotification('❌ Transaction annulée', 'warning');
     }
     
     async chargerSolde() {
         try {
             const response = await fetch(`${this.API_URL}/api/solde/distributeur`);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
-                document.getElementById('solde-distributeur').textContent = 
-                    Math.round(result.solde).toLocaleString();
+                document.getElementById('solde-distributeur').textContent = result.solde.toLocaleString();
             }
         } catch (error) {
-            console.error('Erreur chargement solde:', error);
+            console.error('Erreur lors du chargement du solde:', error);
         }
-    }
-    
-    async chargerStats() {
-        // Simulation des stats - dans une vraie app, récupérer depuis l'API
-        this.stats = {
-            chiffreAffaire: 125000,
-            ventes: 89,
-            transactions: 45
-        };
-        this.mettreAJourStats();
-    }
-    
-    mettreAJourStats() {
-        document.getElementById('stat-chiffre-affaire').textContent = 
-            this.stats.chiffreAffaire.toLocaleString() + ' FCFA';
-        document.getElementById('stat-ventes').textContent = this.stats.ventes;
-        document.getElementById('stat-transactions').textContent = this.stats.transactions;
-    }
-    
-    afficherNotification(message, type = 'info') {
-        // Créer une notification temporaire
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 10px;
-            color: white;
-            font-weight: 600;
-            z-index: 10000;
-            backdrop-filter: blur(20px);
-            animation: slideInRight 0.3s ease;
-            max-width: 300px;
-        `;
-        
-        if (type === 'success') {
-            notification.style.background = 'rgba(76, 175, 80, 0.9)';
-        } else if (type === 'error') {
-            notification.style.background = 'rgba(244, 67, 54, 0.9)';
-        } else {
-            notification.style.background = 'rgba(33, 150, 243, 0.9)';
-        }
-        
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.style.animation = 'slideOutRight 0.3s ease';
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 300);
-        }, 3000);
     }
 }
 
 // Initialiser le distributeur
 document.addEventListener('DOMContentLoaded', function() {
-    window.distributeur = new Distributeur();
+    window.distributeur = new DistributeurCTL();
 });
-
-// Ajouter les animations CSS pour les notifications
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOutRight {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
