@@ -3,167 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CTL Power - Distributeur Intelligent</title>
+    <title>CTL-Power - Distributeur Intelligent</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <!-- Header avec logo -->
         <header class="header">
             <div class="logo-container">
-                <div class="logo">⚡ CTL POWER</div>
+                <div class="logo">⚡ CTL-POWER</div>
                 <div class="slogan">Distributeur Intelligent</div>
             </div>
-            <div class="header-info">
-                <div class="solde-distributeur">
-                    💰 Solde: <span id="solde-distributeur">0</span> FCFA
-                </div>
-                <div class="statut-serveur" id="statut-serveur">
-                    <div class="statut-point"></div>
-                    <span>En ligne</span>
-                </div>
+            <div class="solde-distributeur">
+                💰 Caisse: <span id="solde-distributeur">0</span> FCFA
             </div>
         </header>
 
-        <!-- Navigation -->
-        <nav class="navigation">
-            <button class="nav-btn active" data-section="boissons">🥤 Boissons</button>
-            <button class="nav-btn" data-section="statistiques">📊 Statistiques</button>
-            <button class="nav-btn" data-section="parametres">⚙️ Paramètres</button>
-        </nav>
-
-        <!-- Section principale -->
         <main class="main-content">
-            <!-- Section Boissons -->
-            <section class="content-section active" id="boissons-section">
-                <div class="section-header">
-                    <h2>CHOISISSEZ VOS BOISSONS</h2>
-                    <div class="selection-info">
-                        <span class="badge">MAX 2 BOISSONS</span>
-                    </div>
-                </div>
+            <section class="hero-section">
+                <h1>BOISSONS FRAÎCHES DISPONIBLES</h1>
+                <p>Sélectionnez jusqu'à 2 boissons</p>
+            </section>
 
+            <section class="selection-boissons">
                 <div class="boissons-grid" id="boissons-grid">
                     <!-- Généré par JavaScript -->
                 </div>
-
-                <div class="panier-container">
-                    <div class="panier-header">
-                        <h3>🛒 VOTRE SÉLECTION</h3>
-                        <div class="total-panier">
+                
+                <div class="selection-actuelle">
+                    <div class="selection-header">
+                        <h2>🛒 VOTRE SÉLECTION</h2>
+                        <div class="counter" id="counter">0/2</div>
+                    </div>
+                    <div id="panier" class="panier">
+                        <div class="vide">Aucune boisson sélectionnée</div>
+                    </div>
+                    <div class="total-section">
+                        <div class="total">
                             Total: <span id="total-panier">0</span> FCFA
                         </div>
                     </div>
-                    <div id="panier" class="panier">
-                        <div class="panier-vide">
-                            <div class="empty-icon">🥤</div>
-                            <p>Aucune boisson sélectionnée</p>
+                </div>
+            </section>
+
+            <section class="paiement-section" id="paiement-section">
+                <div class="paiement-header">
+                    <h2>💳 PAIEMENT CTL-PAY</h2>
+                    <div class="transaction-id">ID: <span id="transaction-id">-</span></div>
+                </div>
+                
+                <div class="qr-code-container">
+                    <div id="qr-code" class="qr-code"></div>
+                    <p class="scan-instruction">Scannez avec l'application CTL-Pay</p>
+                    
+                    <div class="transaction-info">
+                        <div class="info-item">
+                            <span>Montant:</span>
+                            <strong id="montant-transaction">0</strong> FCFA
+                        </div>
+                        <div class="info-item">
+                            <span>Expire dans:</span>
+                            <strong id="expiration-timer">10:00</strong>
                         </div>
                     </div>
                 </div>
 
-                <div class="actions-principales">
-                    <button id="btn-payer" class="btn-principal btn-payer" disabled>
-                        <span class="btn-icon">💳</span>
-                        PAYER AVEC CTL-PAY
+                <div class="statut-paiement" id="statut-paiement">
+                    <div class="loader"></div>
+                    <span>En attente de paiement...</span>
+                </div>
+
+                <div class="paiement-actions">
+                    <button id="annuler-paiement" class="btn-annuler">
+                        ❌ Annuler
                     </button>
-                    <button id="btn-modifier" class="btn-secondaire" disabled>
-                        <span class="btn-icon">🔄</span>
-                        MODIFIER
-                    </button>
                 </div>
             </section>
 
-            <!-- Section Paiement -->
-            <section class="content-section" id="paiement-section">
-                <div class="section-header">
-                    <h2>PAIEMENT CTL-PAY</h2>
-                    <div class="transaction-timer">
-                        ⏱️ Expire dans: <span id="expiration-timer">10:00</span>
-                    </div>
-                </div>
-
-                <div class="paiement-container">
-                    <div class="qr-code-card">
-                        <div class="qr-header">
-                            <div class="logo-paiement">💳 CTL-PAY</div>
-                            <div class="montant-paiement" id="montant-transaction">0 FCFA</div>
-                        </div>
-                        
-                        <div class="qr-code-container">
-                            <div id="qr-code" class="qr-code"></div>
-                        </div>
-
-                        <div class="transaction-info">
-                            <div class="info-item">
-                                <span class="info-label">ID Transaction:</span>
-                                <span class="info-value" id="transaction-id">-</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Statut:</span>
-                                <span class="statut-paiement" id="statut-paiement">
-                                    <div class="loader"></div>
-                                    En attente de paiement...
-                                </span>
-                            </div>
-                        </div>
-
-                        <p class="instruction-scan">
-                            📱 Scannez ce code avec l'application CTL-PAY sur votre téléphone
-                        </p>
-                    </div>
-
-                    <div class="actions-secondaires">
-                        <button id="annuler-paiement" class="btn-annuler">
-                            <span class="btn-icon">❌</span>
-                            Annuler la transaction
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Section Statistiques -->
-            <section class="content-section" id="statistiques-section">
-                <div class="stats-container">
-                    <div class="stat-card">
-                        <div class="stat-icon">💰</div>
-                        <div class="stat-value" id="stat-chiffre-affaire">0 FCFA</div>
-                        <div class="stat-label">Chiffre d'affaires</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🥤</div>
-                        <div class="stat-value" id="stat-ventes">0</div>
-                        <div class="stat-label">Boissons vendues</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-value" id="stat-transactions">0</div>
-                        <div class="stat-label">Transactions</div>
-                    </div>
-                </div>
-            </section>
+            <div class="actions-principales">
+                <button id="btn-payer" class="btn-payer" disabled>
+                    💰 PAYER AVEC CTL-PAY
+                </button>
+                <button id="btn-modifier" class="btn-modifier" disabled>
+                    ✏️ MODIFIER
+                </button>
+            </div>
         </main>
 
-        <!-- Footer -->
         <footer class="footer">
             <div class="footer-content">
                 <div class="tech-info">
-                    <span>⚡ CTL Power v2.0</span>
-                    <span class="separator">•</span>
-                    <span>💳 CTL-Pay</span>
+                    <span>⚡ CTL-Power v2.0</span>
+                    <span>🟢 Système en ligne</span>
                 </div>
-                <div class="server-status">
-                    Serveur: <span id="footer-statut">Connecté</span>
+                <div class="contact">
+                    Support: contact@ctlpower.cm
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- Son de notification -->
-    <audio id="sound-scan" preload="auto">
-        <source src="https://assets.mixkit.co/sfx/preview/mixkit-software-interface-start-2574.mp3" type="audio/mpeg">
-    </audio>
+    <div id="statut-connexion" class="statut-connexion"></div>
 
     <script src="config.js"></script>
     <script src="script.js"></script>
